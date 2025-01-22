@@ -167,6 +167,9 @@ static void *load_module(const char *name, const char *featurename)
      * and because LoadLibraryA() will search the executable's folder, which works for the unit tests.
      */
     ld_library_path = getenv("LD_LIBRARY_PATH");
+#ifdef _AIX
+    ld_library_path = getenv("LIBPATH");
+#endif /* AIX */
     if (NULL != ld_library_path && strlen(ld_library_path) > 0) {
 #define MAX_LIBRARY_PATHS 10
         size_t token_index;
@@ -187,6 +190,10 @@ static void *load_module(const char *name, const char *featurename)
                 snprintf(modulename, sizeof(modulename), "%s" PATHSEP "%s%s", tokens[token_index], name, suffixes[i]);
 
                 rhandle = dlopen(modulename, RTLD_NOW);
+#ifdef _AIX
+        snprintf(modulename, sizeof(modulename), "%s%s(%s%s.%d)",name,".a",name,LT_MODULE_EXT,LIBCLAMAV_MAJORVER);
+        rhandle = dlopen(modulename, RTLD_NOW);
+#endif /* AIX */
                 if (NULL != rhandle) {
                     cli_dbgmsg("%s support loaded from %s\n", featurename, modulename);
                     goto done;
@@ -204,8 +211,11 @@ static void *load_module(const char *name, const char *featurename)
 
     for (i = 0; i < sizeof(suffixes) / sizeof(suffixes[0]); i++) {
         snprintf(modulename, sizeof(modulename), "%s" PATHSEP "%s%s", SEARCH_LIBDIR, name, suffixes[i]);
-
         rhandle = dlopen(modulename, RTLD_NOW);
+#ifdef _AIX
+        snprintf(modulename, sizeof(modulename), "%s%s(%s%s.%d)",name,".a",name,LT_MODULE_EXT,LIBCLAMAV_MAJORVER);
+        rhandle = dlopen(modulename, RTLD_NOW | RTLD_MEMBER);
+#endif /* AIX */
         if (NULL != rhandle) {
             cli_dbgmsg("%s support loaded from %s\n", featurename, modulename);
             goto done;
